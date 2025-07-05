@@ -1,10 +1,5 @@
 import { Canvas } from "@react-three/fiber";
-import {
-  Environment,
-  ContactShadows,
-  OrbitControls,
-  Stage,
-} from "@react-three/drei";
+import { Environment, ContactShadows, OrbitControls } from "@react-three/drei";
 import { Model } from "./components/Model";
 import "./App.css";
 
@@ -13,7 +8,7 @@ function App() {
     <div style={{ width: "100vw", height: "100vh" }}>
       <Canvas
         shadows
-        camera={{ position: [10, 10, 10], fov: 50 }}
+        camera={{ position: [5, 3, 5], fov: 50 }}
         gl={{ preserveDrawingBuffer: true }}
       >
         <color attach="background" args={["#f0f0f0"]} />
@@ -32,13 +27,13 @@ function App() {
         />
         <pointLight position={[-10, -10, -10]} intensity={0.5} />
 
-        <Stage environment="city" intensity={0.6} shadows>
+        <group>
           <Model scale={0.1} position={[0, 0, 0]} />
-        </Stage>
+        </group>
 
         {/* Contact shadows for realistic ground contact */}
         <ContactShadows
-          position={[0, -0.75, 0]}
+          position={[0, 0, 0]}
           opacity={0.75}
           scale={10}
           blur={2.5}
