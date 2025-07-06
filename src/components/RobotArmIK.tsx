@@ -45,74 +45,65 @@ export function RobotArmIK(
 
     // Create IK target
     const target = new THREE.Object3D();
-    target.position.set(0, 2, 2); // Position the target
+    target.position.set(0, 2, 2);
     groupRef.current.add(target);
     targetRef.current = target;
 
-    console.log("Robot Arm IK initialized with bones:", {
-      base: nodes.base,
-      shoulder: nodes.shoulder,
-      arm: nodes.arm,
-      elbow: nodes.elbow,
-      forearm: nodes.forearm,
-      hand: nodes.hand,
-      target: target,
-    });
-
-    // Simple IK-like movement (we'll implement proper CCDIKSolver later)
-    const animateIK = () => {
-      // Get target position
+    // Advanced IK system
+    const updateIK = () => {
       const targetPos = target.getWorldPosition(new THREE.Vector3());
       const handPos = nodes.hand.getWorldPosition(new THREE.Vector3());
+      const shoulderPos = nodes.shoulder.getWorldPosition(new THREE.Vector3());
 
-      // Calculate direction to target
-      const direction = targetPos.clone().sub(handPos);
-      const distance = direction.length();
+      const targetDistance = targetPos.distanceTo(handPos);
 
-      // Simple IK-like movement with proper bone hierarchy
-      if (distance > 0.1) {
-        // Get the shoulder's world position
-        const shoulderPos = nodes.shoulder.getWorldPosition(
-          new THREE.Vector3()
-        );
+      if (targetDistance > 0.1) {
+        const shoulderToTargetDir = targetPos
+          .clone()
+          .sub(shoulderPos)
+          .normalize();
 
-        // Calculate direction from shoulder to target
-        const shoulderToTarget = targetPos.clone().sub(shoulderPos);
-
-        // Calculate angles for shoulder rotation
+        // Shoulder rotation (main IK)
         const shoulderAngle = Math.atan2(
-          shoulderToTarget.y,
-          shoulderToTarget.x
+          shoulderToTargetDir.y,
+          shoulderToTargetDir.x
         );
-
-        // Apply rotation to shoulder (considering current rotation)
         nodes.shoulder.rotation.z = THREE.MathUtils.lerp(
           nodes.shoulder.rotation.z,
-          shoulderAngle * 0.3,
-          0.05
+          shoulderAngle * 0.8,
+          0.03
         );
 
-        // Calculate arm rotation relative to shoulder
+        // Arm rotation (secondary IK)
         const armAngle =
-          Math.atan2(shoulderToTarget.z, shoulderToTarget.x) * 0.2;
+          Math.atan2(shoulderToTargetDir.z, shoulderToTargetDir.x) * 0.4;
         nodes.arm.rotation.y = THREE.MathUtils.lerp(
           nodes.arm.rotation.y,
           armAngle,
-          0.05
+          0.02
         );
 
-        // Add some elbow movement
-        nodes.elbow.rotation.z = Math.sin(Date.now() * 0.001) * 0.1;
-      }
+        // Elbow rotation (tertiary IK)
+        const elbowAngle = Math.sin(Date.now() * 0.002) * 0.2;
+        nodes.elbow.rotation.z = THREE.MathUtils.lerp(
+          nodes.elbow.rotation.z,
+          elbowAngle,
+          0.01
+        );
 
-      console.log("Target position:", targetPos);
-      console.log("Hand position:", handPos);
-      console.log("Distance to target:", distance);
+        // Forearm rotation (fine adjustment)
+        const forearmAngle = Math.cos(Date.now() * 0.001) * 0.1;
+        nodes.forearm.rotation.z = THREE.MathUtils.lerp(
+          nodes.forearm.rotation.z,
+          forearmAngle,
+          0.005
+        );
+      }
     };
 
-    // Add to animation loop
+    // Animation loop
     const animate = () => {
-      animateIK();
+      updateIK();
       requestAnimationFrame(animate);
     };
     animate();
@@ -122,7 +113,6 @@ export function RobotArmIK(
   const moveTarget = (position: THREE.Vector3) => {
     if (targetRef.current) {
       targetRef.current.position.copy(position);
-      console.log("Moving target to:", position);
     }
   };
 
@@ -135,7 +125,6 @@ export function RobotArmIK(
 
   return (
     <group ref={groupRef} {...props}>
-      {/* Use the original scene instead of cloning to preserve bone references */}
       <primitive object={scene} />
     </group>
   );
