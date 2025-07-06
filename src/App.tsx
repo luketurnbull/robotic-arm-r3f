@@ -21,19 +21,24 @@ function App() {
   useEffect(() => {
     const testMovement = () => {
       if (robotArmRef.current) {
-        // Move the target to different positions
+        // Move the target to different positions with larger ranges
         const positions = [
-          new THREE.Vector3(0, 2, 2),
-          new THREE.Vector3(1, 2, 1),
-          new THREE.Vector3(-1, 2, 1),
-          new THREE.Vector3(0, 3, 0),
+          new THREE.Vector3(0, 2, 2), // Forward and up
+          new THREE.Vector3(2, 3, 1), // Right, up, and forward
+          new THREE.Vector3(-2, 3, 1), // Left, up, and forward
+          new THREE.Vector3(0, 4, 0), // Straight up
+          new THREE.Vector3(3, 2, -1), // Right, forward, and back
+          new THREE.Vector3(-3, 2, -1), // Left, forward, and back
+          new THREE.Vector3(0, 1, 3), // Forward and down
+          new THREE.Vector3(1, 0, 2), // Right and forward
+          new THREE.Vector3(-1, 0, 2), // Left and forward
         ];
 
         let index = 0;
         const interval = setInterval(() => {
           robotArmRef.current?.moveTarget(positions[index]);
           index = (index + 1) % positions.length;
-        }, 2000);
+        }, 3000); // Increased to 3 seconds to see the movement better
 
         return () => clearInterval(interval);
       }

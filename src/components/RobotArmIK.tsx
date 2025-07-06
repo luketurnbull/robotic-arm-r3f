@@ -59,22 +59,60 @@ export function RobotArmIK(
       target: target,
     });
 
-    // Simple bone rotation test
-    const animateBones = () => {
-      // Rotate the shoulder bone to test if bones are working
-      nodes.shoulder.rotation.z += 0.01;
-      nodes.arm.rotation.z += 0.005;
+    // Simple IK-like movement (we'll implement proper CCDIKSolver later)
+    const animateIK = () => {
+      // Get target position
+      const targetPos = target.getWorldPosition(new THREE.Vector3());
+      const handPos = nodes.hand.getWorldPosition(new THREE.Vector3());
 
-      console.log("Target position:", target.position);
-      console.log(
-        "Hand bone position:",
-        nodes.hand.getWorldPosition(new THREE.Vector3())
-      );
+      // Calculate direction to target
+      const direction = targetPos.clone().sub(handPos);
+      const distance = direction.length();
+
+      // Simple IK-like movement with proper bone hierarchy
+      if (distance > 0.1) {
+        // Get the shoulder's world position
+        const shoulderPos = nodes.shoulder.getWorldPosition(
+          new THREE.Vector3()
+        );
+
+        // Calculate direction from shoulder to target
+        const shoulderToTarget = targetPos.clone().sub(shoulderPos);
+
+        // Calculate angles for shoulder rotation
+        const shoulderAngle = Math.atan2(
+          shoulderToTarget.y,
+          shoulderToTarget.x
+        );
+
+        // Apply rotation to shoulder (considering current rotation)
+        nodes.shoulder.rotation.z = THREE.MathUtils.lerp(
+          nodes.shoulder.rotation.z,
+          shoulderAngle * 0.3,
+          0.05
+        );
+
+        // Calculate arm rotation relative to shoulder
+        const armAngle =
+          Math.atan2(shoulderToTarget.z, shoulderToTarget.x) * 0.2;
+        nodes.arm.rotation.y = THREE.MathUtils.lerp(
+          nodes.arm.rotation.y,
+          armAngle,
+          0.05
+        );
+
+        // Add some elbow movement
+        nodes.elbow.rotation.z = Math.sin(Date.now() * 0.001) * 0.1;
+      }
+
+      console.log("Target position:", targetPos);
+      console.log("Hand position:", handPos);
+      console.log("Distance to target:", distance);
     };
 
     // Add to animation loop
     const animate = () => {
-      animateBones();
+      animateIK();
       requestAnimationFrame(animate);
     };
     animate();
