@@ -94,21 +94,33 @@ export function RobotArmIK(
           0.03
         );
 
-        // Arm rotation (secondary IK)
+        // Arm rotation (follows shoulder movement, no independent IK)
         const armAngle =
-          Math.atan2(shoulderToTargetDir.z, shoulderToTargetDir.x) * 0.4;
+          Math.atan2(shoulderToTargetDir.z, shoulderToTargetDir.x) * 0.3;
         nodes.arm.rotation.y = THREE.MathUtils.lerp(
           nodes.arm.rotation.y,
           armAngle,
-          0.02
+          0.01
         );
 
-        // Elbow rotation (tertiary IK)
-        const elbowAngle = Math.sin(Date.now() * 0.002) * 0.2;
-        nodes.elbow.rotation.z = THREE.MathUtils.lerp(
-          nodes.elbow.rotation.z,
-          elbowAngle,
-          0.01
+        // Elbow rotation (X-axis only) - 70 degree limit constraint
+        const elbowAngle = Math.atan2(
+          shoulderToTargetDir.z,
+          shoulderToTargetDir.x
+        );
+
+        // Apply 70-degree limit (convert to radians: 70° = 1.22 radians)
+        const maxElbowAngle = 1.22; // 70 degrees in radians
+        const clampedElbowAngle = THREE.MathUtils.clamp(
+          elbowAngle * 0.6,
+          -maxElbowAngle,
+          maxElbowAngle
+        );
+
+        nodes.elbow.rotation.x = THREE.MathUtils.lerp(
+          nodes.elbow.rotation.x,
+          clampedElbowAngle,
+          0.02
         );
 
         // Forearm rotation (fine adjustment)
