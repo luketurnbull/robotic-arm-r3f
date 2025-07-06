@@ -14,39 +14,34 @@ function App() {
     moveTarget: (position: THREE.Vector3) => void;
   }) => {
     robotArmRef.current = controls;
-    console.log("Robot arm controls ready!");
   };
 
-  // Test IK movement
+  // Mouse tracking
   useEffect(() => {
-    const testMovement = () => {
+    const handleMouseMove = (event: MouseEvent) => {
+      // Convert mouse position to normalized device coordinates (-1 to +1)
+      const x = (event.clientX / window.innerWidth) * 2 - 1;
+      const y = (event.clientY / window.innerHeight) * 2 - 1; // Removed negative sign
+
+      // Convert to 3D world coordinates
+      const worldX = x * 4; // Scale to reasonable world space
+      const worldY = y * 4 + 4; // Increased scale and offset for more vertical range
+      const worldZ = 2; // Keep Z constant for now
+
+      const newPosition = new THREE.Vector3(worldX, worldY, worldZ);
+
+      // Move the robot arm target
       if (robotArmRef.current) {
-        // Move the target to different positions with larger ranges
-        const positions = [
-          new THREE.Vector3(0, 2, 2), // Forward and up
-          new THREE.Vector3(2, 3, 1), // Right, up, and forward
-          new THREE.Vector3(-2, 3, 1), // Left, up, and forward
-          new THREE.Vector3(0, 4, 0), // Straight up
-          new THREE.Vector3(3, 2, -1), // Right, forward, and back
-          new THREE.Vector3(-3, 2, -1), // Left, forward, and back
-          new THREE.Vector3(0, 1, 3), // Forward and down
-          new THREE.Vector3(1, 0, 2), // Right and forward
-          new THREE.Vector3(-1, 0, 2), // Left and forward
-        ];
-
-        let index = 0;
-        const interval = setInterval(() => {
-          robotArmRef.current?.moveTarget(positions[index]);
-          index = (index + 1) % positions.length;
-        }, 3000); // Increased to 3 seconds to see the movement better
-
-        return () => clearInterval(interval);
+        robotArmRef.current.moveTarget(newPosition);
       }
     };
 
-    const timeout = setTimeout(testMovement, 1000);
-    return () => clearTimeout(timeout);
-  }, [robotArmRef.current]);
+    window.addEventListener("mousemove", handleMouseMove);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, []);
 
   return (
     <div style={{ width: "100vw", height: "100vh" }}>
