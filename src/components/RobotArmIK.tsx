@@ -54,6 +54,7 @@ export function RobotArmIK(
       const targetPos = target.getWorldPosition(new THREE.Vector3());
       const handPos = nodes.hand.getWorldPosition(new THREE.Vector3());
       const shoulderPos = nodes.shoulder.getWorldPosition(new THREE.Vector3());
+      const basePos = nodes.base.getWorldPosition(new THREE.Vector3());
 
       const targetDistance = targetPos.distanceTo(handPos);
 
@@ -63,14 +64,33 @@ export function RobotArmIK(
           .sub(shoulderPos)
           .normalize();
 
-        // Shoulder rotation (main IK)
+        // Base rotation (Y-axis only - turntable constraint)
+        const baseToTargetDir = targetPos.clone().sub(basePos).normalize();
+        const baseAngle = Math.atan2(baseToTargetDir.x, baseToTargetDir.z);
+        nodes.base.rotation.y = THREE.MathUtils.lerp(
+          nodes.base.rotation.y,
+          baseAngle,
+          0.02
+        );
+
+        // Shoulder rotation (main IK) - 70 degree limit constraint
         const shoulderAngle = Math.atan2(
           shoulderToTargetDir.y,
           shoulderToTargetDir.x
         );
-        nodes.shoulder.rotation.z = THREE.MathUtils.lerp(
-          nodes.shoulder.rotation.z,
+
+        // Apply 70-degree limit (convert to radians: 70° = 1.22 radians)
+        const maxAngle = 1.22; // 70 degrees in radians
+        const clampedAngle = THREE.MathUtils.clamp(
           shoulderAngle * 0.8,
+          -maxAngle,
+          maxAngle
+        );
+
+        // Try Y-axis rotation for more natural shoulder movement
+        nodes.shoulder.rotation.y = THREE.MathUtils.lerp(
+          nodes.shoulder.rotation.y,
+          clampedAngle,
           0.03
         );
 
