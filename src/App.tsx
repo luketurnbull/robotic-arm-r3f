@@ -1,9 +1,48 @@
 import { Canvas } from "@react-three/fiber";
 import { Environment, ContactShadows, OrbitControls } from "@react-three/drei";
-import { Model } from "./components/Model";
+import { RobotArmIK } from "./components/RobotArmIK";
 import "./App.css";
+import { useEffect, useRef } from "react";
+import * as THREE from "three";
 
 function App() {
+  const robotArmRef = useRef<{
+    moveTarget: (position: THREE.Vector3) => void;
+  } | null>(null);
+
+  const handleRobotArmReady = (controls: {
+    moveTarget: (position: THREE.Vector3) => void;
+  }) => {
+    robotArmRef.current = controls;
+    console.log("Robot arm controls ready!");
+  };
+
+  // Test IK movement
+  useEffect(() => {
+    const testMovement = () => {
+      if (robotArmRef.current) {
+        // Move the target to different positions
+        const positions = [
+          new THREE.Vector3(0, 2, 2),
+          new THREE.Vector3(1, 2, 1),
+          new THREE.Vector3(-1, 2, 1),
+          new THREE.Vector3(0, 3, 0),
+        ];
+
+        let index = 0;
+        const interval = setInterval(() => {
+          robotArmRef.current?.moveTarget(positions[index]);
+          index = (index + 1) % positions.length;
+        }, 2000);
+
+        return () => clearInterval(interval);
+      }
+    };
+
+    const timeout = setTimeout(testMovement, 1000);
+    return () => clearTimeout(timeout);
+  }, [robotArmRef.current]);
+
   return (
     <div style={{ width: "100vw", height: "100vh" }}>
       <Canvas
@@ -28,7 +67,11 @@ function App() {
         <pointLight position={[-10, -10, -10]} intensity={0.5} />
 
         <group>
-          <Model scale={0.1} position={[0, 0, 0]} />
+          <RobotArmIK
+            scale={0.1}
+            position={[0, 0, 0]}
+            onReady={handleRobotArmReady}
+          />
         </group>
 
         {/* Contact shadows for realistic ground contact */}
