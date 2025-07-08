@@ -1,6 +1,7 @@
 import * as THREE from "three";
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { useGLTF, useAnimations } from "@react-three/drei";
+import { useThree } from "@react-three/fiber";
 import type { GLTF } from "three-stdlib";
 import type { JSX } from "react";
 
@@ -42,6 +43,8 @@ export function Model({
   const group = useRef<THREE.Group>(null!);
   const [currentAction, setCurrentAction] = useState<ActionName>("Idle");
 
+  const { camera } = useThree();
+
   const { nodes, materials, animations } = useGLTF(
     "/animation.glb"
   ) as unknown as GLTFResult;
@@ -65,23 +68,25 @@ export function Model({
   };
 
   // Smooth transition between animations
-  const transitionToAnimation = (targetAnimation: ActionName) => {
-    if (!actions[targetAnimation] || currentAction === targetAnimation) return;
+  const transitionToAnimation = useCallback(
+    (targetAnimation: ActionName) => {
+      if (!actions[targetAnimation] || currentAction === targetAnimation)
+        return;
 
-    const currentAnim = actions[currentAction];
-    const targetAnim = actions[targetAnimation];
+      const currentAnim = actions[currentAction];
+      const targetAnim = actions[targetAnimation];
 
-    if (currentAnim && targetAnim) {
-      targetAnim.reset().play();
-      currentAnim.crossFadeTo(targetAnim, 0.3); // 0.3 second blend
-      setCurrentAction(targetAnimation);
-    }
-  };
+      if (currentAnim && targetAnim) {
+        targetAnim.reset().play();
+        currentAnim.crossFadeTo(targetAnim, 0.3); // 0.3 second blend
+        setCurrentAction(targetAnimation);
+      }
+    },
+    [actions, currentAction]
+  );
 
   // Initialize animations
   useEffect(() => {
-    console.log("Available animations:", Object.keys(actions));
-
     // Set all animations to clamp (don't loop)
     Object.values(actions).forEach((action) => {
       if (action) {
@@ -104,7 +109,18 @@ export function Model({
       mousePosition.y
     );
     transitionToAnimation(targetAnimation);
-  }, [mousePosition, currentAction, actions]);
+  }, [mousePosition, currentAction, actions, transitionToAnimation]);
+
+  useEffect(() => {
+    if (camera) {
+      const lookAtPosition = new THREE.Vector3(
+        group.current.position.x + 2,
+        group.current.position.y + 1,
+        group.current.position.z
+      );
+      camera.lookAt(lookAtPosition);
+    }
+  }, [camera]);
 
   return (
     <group ref={group} {...props} dispose={null}>
