@@ -1,5 +1,5 @@
 import { Canvas } from "@react-three/fiber";
-import { Environment, ContactShadows, OrbitControls } from "@react-three/drei";
+import { Environment, ContactShadows } from "@react-three/drei";
 import { Model } from "./components/Model";
 import { useState, useEffect } from "react";
 import "./App.css";
@@ -23,7 +23,7 @@ function App() {
     <div style={{ width: "100vw", height: "100vh" }}>
       <Canvas
         shadows
-        camera={{ position: [5, 3, 5], fov: 50 }}
+        camera={{ position: [5, 1, -5], fov: 50 }}
         gl={{ preserveDrawingBuffer: true }}
       >
         <color attach="background" args={["#f0f0f0"]} />
@@ -42,13 +42,7 @@ function App() {
         />
         <pointLight position={[-10, -10, -10]} intensity={0.5} />
 
-        <group>
-          <Model
-            scale={0.1}
-            position={[0, 0, 0]}
-            mousePosition={mousePosition}
-          />
-        </group>
+        <Model scale={0.1} position={[0, 0, 0]} mousePosition={mousePosition} />
 
         {/* Contact shadows for realistic ground contact */}
         <ContactShadows
@@ -58,9 +52,6 @@ function App() {
           blur={2.5}
           far={4}
         />
-
-        {/* Orbit controls for camera manipulation */}
-        <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} />
       </Canvas>
     </div>
   );
