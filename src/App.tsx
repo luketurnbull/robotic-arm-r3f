@@ -26,7 +26,7 @@ function App() {
         camera={{ position: [5, 1, -5], fov: 50 }}
         gl={{ preserveDrawingBuffer: true }}
       >
-        <color attach="background" args={["#f0f0f0"]} />
+        <color attach="background" args={["#ffffff"]} />
 
         {/* Environment with city preset */}
         <Environment preset="city" />
