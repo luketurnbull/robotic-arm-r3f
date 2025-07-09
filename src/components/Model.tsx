@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import { useGLTF, useAnimations } from "@react-three/drei";
-import { useThree } from "@react-three/fiber";
+import { useThree, useFrame } from "@react-three/fiber";
 import type { GLTF } from "three-stdlib";
 import type { JSX } from "react";
 
@@ -41,81 +41,148 @@ export function Model({
   ...props
 }: ModelProps) {
   const group = useRef<THREE.Group>(null!);
-  const [currentAction, setCurrentAction] = useState<ActionName>("Idle");
+  const mixer = useRef<THREE.AnimationMixer | null>(null);
+  const currentWeights = useRef<Record<ActionName, number>>({
+    TopLeft: 0,
+    TopRight: 0,
+    BottomLeft: 0,
+    BottomRight: 0,
+    Idle: 1,
+  });
 
   const { camera } = useThree();
 
   const { nodes, materials, animations } = useGLTF(
-    "/animation.glb"
+    "/animation-2.glb"
   ) as unknown as GLTFResult;
 
   const { actions } = useAnimations(animations, group) as unknown as {
     actions: Record<ActionName, THREE.AnimationAction>;
   };
 
-  // Determine target animation based on mouse position
-  const getTargetAnimation = (x: number, y: number): ActionName => {
-    // Dead zone in center for idle
-    if (Math.abs(x) < 0.2 && Math.abs(y) < 0.2) return "Idle";
+  // Calculate target weights based on mouse position
+  const calculateTargetWeights = useCallback(
+    (mousePos: { x: number; y: number }) => {
+      // Normalize mouse position from [-1, 1] to [0, 1] for easier calculation
+      const normalizedX = (mousePos.x + 1) / 2;
+      const normalizedY = (mousePos.y + 1) / 2;
 
-    // Quadrant-based selection
-    if (x > 0 && y > 0) return "TopRight";
-    if (x < 0 && y > 0) return "TopLeft";
-    if (x < 0 && y < 0) return "BottomLeft";
-    if (x > 0 && y < 0) return "BottomRight";
+      // Define deadzone for center (idle) - adjust as needed
+      const deadZone = 0.1;
+      const centerX = Math.abs(mousePos.x) < deadZone;
+      const centerY = Math.abs(mousePos.y) < deadZone;
 
-    return "Idle";
-  };
-
-  // Smooth transition between animations
-  const transitionToAnimation = useCallback(
-    (targetAnimation: ActionName) => {
-      if (!actions[targetAnimation] || currentAction === targetAnimation)
-        return;
-
-      const currentAnim = actions[currentAction];
-      const targetAnim = actions[targetAnimation];
-
-      if (currentAnim && targetAnim) {
-        targetAnim.reset().play();
-        currentAnim.crossFadeTo(targetAnim, 0.3); // 0.3 second blend
-        setCurrentAction(targetAnimation);
+      if (centerX && centerY) {
+        // In center deadzone - use idle
+        return {
+          TopLeft: 0,
+          TopRight: 0,
+          BottomLeft: 0,
+          BottomRight: 0,
+          Idle: 1,
+        };
       }
+
+      // Calculate weights for each corner based on distance
+      const topWeight = Math.max(0, normalizedY);
+      const bottomWeight = Math.max(0, 1 - normalizedY);
+      const leftWeight = Math.max(0, 1 - normalizedX);
+      const rightWeight = Math.max(0, normalizedX);
+
+      const weights = {
+        TopLeft: topWeight * leftWeight,
+        TopRight: topWeight * rightWeight,
+        BottomLeft: bottomWeight * leftWeight,
+        BottomRight: bottomWeight * rightWeight,
+        Idle: 0,
+      };
+
+      // Normalize weights so they sum to 1
+      const totalWeight = Object.values(weights).reduce(
+        (sum, weight) => sum + weight,
+        0
+      );
+      if (totalWeight > 0) {
+        Object.keys(weights).forEach((key) => {
+          weights[key as ActionName] /= totalWeight;
+        });
+      }
+
+      return weights;
     },
-    [actions, currentAction]
+    []
   );
 
   // Initialize animations
   useEffect(() => {
-    // Set all animations to clamp (don't loop)
+    if (!actions || !group.current) return;
+
+    // Create mixer
+    mixer.current = new THREE.AnimationMixer(group.current);
+
+    // Setup all actions
     Object.values(actions).forEach((action) => {
       if (action) {
         action.setLoop(THREE.LoopOnce, 1);
         action.clampWhenFinished = true;
+        action.enabled = true;
+        action.setEffectiveTimeScale(1);
+        action.setEffectiveWeight(0);
+        action.play();
       }
     });
 
-    // Start with idle animation
-    if (actions["Idle"]) {
-      actions["Idle"].play();
-      setCurrentAction("Idle");
+    // Start with idle pose
+    if (actions.Idle) {
+      actions.Idle.setEffectiveWeight(1);
     }
+
+    return () => {
+      if (mixer.current) {
+        mixer.current.stopAllAction();
+      }
+    };
   }, [actions]);
 
-  // Handle mouse position changes
-  useEffect(() => {
-    const targetAnimation = getTargetAnimation(
-      mousePosition.x,
-      mousePosition.y
-    );
-    transitionToAnimation(targetAnimation);
-  }, [mousePosition, currentAction, actions, transitionToAnimation]);
+  // Animation loop
+  useFrame((_, delta) => {
+    if (!mixer.current || !actions) return;
+
+    // Calculate target weights
+    const targetWeights = calculateTargetWeights(mousePosition);
+
+    // Smoothly interpolate current weights towards target weights
+    const lerpSpeed = 3; // Adjust for faster/slower transitions
+    Object.keys(currentWeights.current).forEach((actionName) => {
+      const key = actionName as ActionName;
+      const currentWeight = currentWeights.current[key];
+      const targetWeight = targetWeights[key];
+
+      // Smooth interpolation
+      const newWeight = THREE.MathUtils.lerp(
+        currentWeight,
+        targetWeight,
+        lerpSpeed * delta
+      );
+      currentWeights.current[key] = newWeight;
+
+      // Apply weight to action
+      if (actions[key]) {
+        actions[key].setEffectiveWeight(newWeight);
+      }
+    });
+
+    // Update mixer
+    mixer.current.update(delta);
+
+    console.log(camera.position);
+  });
 
   useEffect(() => {
     if (camera) {
       const lookAtPosition = new THREE.Vector3(
-        group.current.position.x + 2,
-        group.current.position.y + 1,
+        group.current.position.x - 2,
+        group.current.position.y,
         group.current.position.z
       );
       camera.lookAt(lookAtPosition);
@@ -142,4 +209,4 @@ export function Model({
   );
 }
 
-useGLTF.preload("/animation.glb");
+useGLTF.preload("/animation-2.glb");
