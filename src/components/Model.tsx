@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { useGLTF, useAnimations } from "@react-three/drei";
 import { useThree, useFrame } from "@react-three/fiber";
 import type { GLTF } from "three-stdlib";
@@ -25,12 +25,7 @@ type GLTFResult = GLTF & {
   };
 };
 
-type ActionName =
-  | "BottomLeft"
-  | "BottomRight"
-  | "Idle"
-  | "TopLeft"
-  | "TopRight";
+type ActionName = "BottomLeft" | "BottomRight" | "TopLeft" | "TopRight";
 
 type ModelProps = {
   mousePosition?: { x: number; y: number };
@@ -43,11 +38,10 @@ export function Model({
   const group = useRef<THREE.Group>(null!);
   const mixer = useRef<THREE.AnimationMixer | null>(null);
   const currentWeights = useRef<Record<ActionName, number>>({
-    TopLeft: 0,
-    TopRight: 0,
-    BottomLeft: 0,
-    BottomRight: 0,
-    Idle: 1,
+    TopLeft: 0.25,
+    TopRight: 0.25,
+    BottomLeft: 0.25,
+    BottomRight: 0.25,
   });
 
   const { camera } = useThree();
@@ -120,22 +114,17 @@ export function Model({
     // Create mixer
     mixer.current = new THREE.AnimationMixer(group.current);
 
-    // Setup all actions
-    Object.values(actions).forEach((action) => {
+    // Setup all actions as static poses
+    Object.entries(actions).forEach(([_, action]) => {
       if (action) {
         action.setLoop(THREE.LoopOnce, 1);
         action.clampWhenFinished = true;
         action.enabled = true;
         action.setEffectiveTimeScale(1);
-        action.setEffectiveWeight(0);
+        action.setEffectiveWeight(0.25); // Start with equal weights
         action.play();
       }
     });
-
-    // Start with idle pose
-    if (actions.Idle) {
-      actions.Idle.setEffectiveWeight(1);
-    }
 
     return () => {
       if (mixer.current) {
@@ -145,7 +134,7 @@ export function Model({
   }, [actions]);
 
   // Animation loop
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     if (!mixer.current || !actions) return;
 
     // Calculate target weights
@@ -174,8 +163,6 @@ export function Model({
 
     // Update mixer
     mixer.current.update(delta);
-
-    console.log(camera.position);
   });
 
   useEffect(() => {
