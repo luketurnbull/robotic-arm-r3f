@@ -1,5 +1,5 @@
 import { Canvas } from "@react-three/fiber";
-import { Environment, ContactShadows, OrbitControls } from "@react-three/drei";
+import { Environment, ContactShadows } from "@react-three/drei";
 import { Model } from "./components/Model";
 import { useState, useEffect } from "react";
 import "./App.css";
