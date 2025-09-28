@@ -170,7 +170,7 @@ export function Model({
     if (camera) {
       const lookAtPosition = new THREE.Vector3(
         group.current.position.x,
-        group.current.position.y + 1,
+        group.current.position.y,
         group.current.position.z
       );
       camera.lookAt(lookAtPosition);
@@ -178,7 +178,7 @@ export function Model({
   }, [camera]);
 
   return (
-    <group ref={group} {...props} scale={0.15} dispose={null}>
+    <group ref={group} {...props} scale={0.1} dispose={null}>
       <group name="Scene">
         <group name="Armature" position={[0, 5.676, 0]}>
           <primitive object={nodes.Shoulder} />
