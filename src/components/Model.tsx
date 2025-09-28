@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useCallback } from "react";
 import { useGLTF, useAnimations } from "@react-three/drei";
 import { useThree, useFrame } from "@react-three/fiber";
 import type { GLTF } from "three-stdlib";
@@ -33,6 +33,7 @@ type ModelProps = {
 
 export function Model({
   mousePosition = { x: 0, y: 0 },
+  scale = 1,
   ...props
 }: ModelProps) {
   const group = useRef<THREE.Group>(null!);
@@ -134,7 +135,7 @@ export function Model({
   }, [actions]);
 
   // Animation loop
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     if (!mixer.current || !actions) return;
 
     // Calculate target weights
@@ -168,8 +169,8 @@ export function Model({
   useEffect(() => {
     if (camera) {
       const lookAtPosition = new THREE.Vector3(
-        group.current.position.x - 2,
-        group.current.position.y,
+        group.current.position.x,
+        group.current.position.y + 1,
         group.current.position.z
       );
       camera.lookAt(lookAtPosition);
@@ -177,7 +178,7 @@ export function Model({
   }, [camera]);
 
   return (
-    <group ref={group} {...props} dispose={null}>
+    <group ref={group} {...props} scale={0.15} dispose={null}>
       <group name="Scene">
         <group name="Armature" position={[0, 5.676, 0]}>
           <primitive object={nodes.Shoulder} />
